@@ -3,10 +3,7 @@ import { resolve } from 'path';
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), '.env');
-  if (!existsSync(envPath)) {
-    console.error('.env file not found.');
-    process.exit(1);
-  }
+  if (!existsSync(envPath)) return;
 
   const raw = readFileSync(envPath, 'utf-8');
   const lines = raw.split('\n');
@@ -45,7 +42,7 @@ const config = {
 };
 
 if (!config.groqApiKey) {
-  console.error('GROQ_API_KEY is required in .env file.');
+  console.error('GROQ_API_KEY is required. Set it in .env or Railway Variables.');
   process.exit(1);
 }
 
