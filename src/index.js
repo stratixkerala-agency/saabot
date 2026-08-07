@@ -186,15 +186,13 @@ process.on('unhandledRejection', (err) => {
 });
 
 async function main() {
-  console.log('\n--- Login Method ---');
-  console.log('1. QR Code');
-  console.log('2. Phone Number');
-  const choice = await askQuestion('Select (1 or 2): ');
+  const isInteractive = process.stdin.isTTY;
 
-  let phoneNumber = null;
-  if (choice === '2') {
-    phoneNumber = await askQuestion('Enter WhatsApp number (e.g. 263771234567): ');
-    if (!phoneNumber.match(/^\d+$/)) { console.log('Invalid. Using QR.'); phoneNumber = null; }
+  if (isInteractive) {
+    console.log('\n--- Login Method ---');
+    console.log('1. QR Code');
+    console.log('2. Phone Number');
+    const choice = await askQuestion('Select (1 or 2): ');
   }
 
   startBot();
