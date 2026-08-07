@@ -108,6 +108,7 @@ function startBot() {
 
   client.on('message', async (msg) => {
     try {
+      console.log('[MSG] from:', msg.from, 'group:', msg.isGroup, 'body:', msg.body?.slice(0, 50));
       if (msg.isGroup) return;
       const chatId = msg.from;
       if (!chatId) return;
@@ -115,7 +116,6 @@ function startBot() {
       if (chatId.endsWith('@broadcast')) return;
       if (chatId === 'status@broadcast') return;
       if (chatId.endsWith('@newsletter')) return;
-      if (chatId.endsWith('@lid')) return;
 
       const text = msg.body;
       if (!text || typeof text !== 'string') return;
