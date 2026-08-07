@@ -1,6 +1,6 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
-import qrcode from 'qrcode-terminal';
+import QRCode from 'qrcode';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { createInterface } from 'readline';
 import { generateReply } from './ai.js';
@@ -74,9 +74,18 @@ function startBot() {
     puppeteer: puppeteerConfig,
   });
 
-  client.on('qr', (qr) => {
+  client.on('qr', async (qr) => {
     console.log('\n--- Scan this QR code ---\n');
-    qrcode.generate(qr, { small: true });
+    try {
+      const dataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
+      console.log('Open this link in your browser to scan:');
+      console.log(dataUrl);
+      console.log('\nOr scan this ASCII QR:');
+      const ascii = await QRCode.toString(qr, { type: 'terminal', small: true });
+      console.log(ascii);
+    } catch {
+      console.log('QR generated — check Railway preview or use phone pairing');
+    }
   });
 
   client.on('ready', () => {
