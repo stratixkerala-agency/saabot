@@ -1,0 +1,10 @@
+services:
+  whatsapp-bot:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./sessions:/app/sessions
+      - ./.env:/app/.env
+      - ./bot-state.json:/app/bot-state.json
+    environment:
+      - NODE_ENV=production

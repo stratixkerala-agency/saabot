@@ -1,0 +1,15 @@
+{
+  "name": "whatsapp-ai-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "WhatsApp AI agent powered by Groq Cloud",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.26.1-alpha.3",
+    "groq-sdk": "^0.8.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
