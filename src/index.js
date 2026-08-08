@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { createInterface } from 'readline';
 import { generateReply } from './ai.js';
 import { typingDelay, canSendMessage, recordMessage } from './antiBan.js';
-import { setClient, setOnline, setQr, logConversation } from './server.js';
+import { setOnline, setQr, logConversation } from './server.js';
 
 const STATE_FILE = './bot-state.json';
 const CONTACTS_FILE = './contacts-seen.json';
@@ -74,8 +74,6 @@ function startBot() {
     authStrategy: new LocalAuth({ dataPath: './sessions' }),
     puppeteer: puppeteerConfig,
   });
-
-  setClient(client);
 
   client.on('qr', async (qr) => {
     await setQr(qr);
