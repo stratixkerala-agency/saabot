@@ -103,6 +103,7 @@ function startBot() {
 
   client.on('message', async (msg) => {
     try {
+      console.log('[MSG DEBUG] from:', msg.from, 'body:', msg.body, 'type:', msg.type, 'isGroup:', msg.isGroup);
       if (msg.isGroup) return;
       const chatId = msg.from;
       if (!chatId) return;
