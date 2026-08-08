@@ -1,6 +1,6 @@
 import express from 'express';
+import QRCode from 'qrcode';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,8 +12,7 @@ const STATE_FILE = './bot-state.json';
 const CONTACTS_FILE = './contacts-seen.json';
 const CONVERSATIONS_FILE = './conversations.json';
 
-let whatsappClient = null;
-let botStatus = { online: false, qr: null };
+let botStatus = { online: false, qr: null, qrDataUrl: null };
 
 function loadJson(file, fallback) {
   if (existsSync(file)) {
@@ -26,16 +25,18 @@ function saveJson(file, data) {
   try { writeFileSync(file, JSON.stringify(data, null, 2)); } catch {}
 }
 
-export function setClient(client) {
-  whatsappClient = client;
-}
-
 export function setOnline(status) {
   botStatus.online = status;
+  if (status) botStatus.qr = null;
 }
 
-export function setQr(qr) {
+export async function setQr(qr) {
   botStatus.qr = qr;
+  try {
+    botStatus.qrDataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
+  } catch {
+    botStatus.qrDataUrl = null;
+  }
 }
 
 export function logConversation(chatId, message, reply) {
@@ -57,6 +58,14 @@ app.get('/api/status', (req, res) => {
     enabled: state.enabled,
     hasQr: !!botStatus.qr
   });
+});
+
+app.get('/api/qr', async (req, res) => {
+  if (botStatus.qrDataUrl) {
+    res.json({ qr: botStatus.qrDataUrl });
+  } else {
+    res.json({ qr: null });
+  }
 });
 
 app.post('/api/toggle', (req, res) => {

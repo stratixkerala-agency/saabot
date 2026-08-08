@@ -78,12 +78,9 @@ function startBot() {
   setClient(client);
 
   client.on('qr', async (qr) => {
-    setQr(qr);
-    console.log('\n--- Scan this QR code ---\n');
-    try {
-      const ascii = await QRCode.toString(qr, { type: 'terminal', small: true });
-      console.log(ascii);
-    } catch {}
+    await setQr(qr);
+    console.log('\n--- Scan QR code from dashboard ---');
+    console.log(`  Dashboard: http://localhost:${process.env.PORT || 3000}\n`);
   });
 
   client.on('ready', () => {
