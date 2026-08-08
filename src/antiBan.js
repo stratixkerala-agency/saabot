@@ -11,7 +11,13 @@ export function sleep(ms) {
 }
 
 export async function typingDelay() {
-  const delay = randomDelay();
+  let delay = randomDelay();
+
+  // 15% chance of a longer pause (simulates human thinking)
+  if (Math.random() < 0.15) {
+    delay += 5000 + Math.random() * 10000;
+  }
+
   await sleep(delay);
 }
 

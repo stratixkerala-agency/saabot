@@ -35,9 +35,9 @@ loadEnv();
 const config = {
   groqApiKey: process.env.GROQ_API_KEY,
   systemPrompt: process.env.SYSTEM_PROMPT || 'You are a helpful WhatsApp assistant.',
-  minDelay: parseInt(process.env.MIN_DELAY_MS || '2000', 10),
-  maxDelay: parseInt(process.env.MAX_DELAY_MS || '4000', 10),
-  maxMessagesPerMinute: parseInt(process.env.MAX_MESSAGES_PER_MINUTE || '20', 10),
+  minDelay: parseInt(process.env.MIN_DELAY_MS || '5000', 10),
+  maxDelay: parseInt(process.env.MAX_DELAY_MS || '12000', 10),
+  maxMessagesPerMinute: parseInt(process.env.MAX_MESSAGES_PER_MINUTE || '8', 10),
   groqModel: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
 };
 
