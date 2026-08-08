@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { createInterface } from 'readline';
 import { generateReply } from './ai.js';
 import { typingDelay, canSendMessage, recordMessage } from './antiBan.js';
+import { setClient, setOnline, setQr, logConversation } from './server.js';
 
 const STATE_FILE = './bot-state.json';
 const CONTACTS_FILE = './contacts-seen.json';
@@ -74,30 +75,29 @@ function startBot() {
     puppeteer: puppeteerConfig,
   });
 
+  setClient(client);
+
   client.on('qr', async (qr) => {
+    setQr(qr);
     console.log('\n--- Scan this QR code ---\n');
     try {
-      const dataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
-      console.log('Open this link in your browser to scan:');
-      console.log(dataUrl);
-      console.log('\nOr scan this ASCII QR:');
       const ascii = await QRCode.toString(qr, { type: 'terminal', small: true });
       console.log(ascii);
-    } catch {
-      console.log('QR generated — check Railway preview or use phone pairing');
-    }
+    } catch {}
   });
 
   client.on('ready', () => {
+    setOnline(true);
     console.log('\n✓ Yasky is online!');
-    console.log(`  Status: ${botState.enabled ? 'ON' : 'OFF'}`);
-    console.log('  Send "bot on" or "bot off" to toggle.\n');
+    console.log(`  Dashboard: http://localhost:${process.env.PORT || 3000}`);
+    console.log(`  Status: ${botState.enabled ? 'ON' : 'OFF'}\n`);
   });
 
   client.on('authenticated', () => console.log('✓ Authenticated'));
   client.on('auth_failure', (msg) => console.error('Auth failed:', msg));
 
   client.on('disconnected', (reason) => {
+    setOnline(false);
     console.log('[Disconnected]:', reason);
     console.log('[Reconnecting in 5s...]');
     setTimeout(() => {
@@ -108,7 +108,6 @@ function startBot() {
 
   client.on('message', async (msg) => {
     try {
-      console.log('[MSG] from:', msg.from, 'group:', msg.isGroup, 'body:', msg.body?.slice(0, 50));
       if (msg.isGroup) return;
       const chatId = msg.from;
       if (!chatId) return;
@@ -151,6 +150,7 @@ function startBot() {
         saveContacts(contactsSeen);
         console.log(`[New contact]: ${chatId}`);
         await msg.reply(WELCOME_MSG);
+        logConversation(chatId, trimmed, WELCOME_MSG);
         return;
       }
 
@@ -166,6 +166,7 @@ function startBot() {
       const reply = await generateReply(chatId, trimmed);
       await msg.reply(reply);
       recordMessage();
+      logConversation(chatId, trimmed, reply);
       console.log(`[Replied]: ${reply.slice(0, 80)}...`);
     } catch (err) {
       console.error('[Message error]:', err.message);
@@ -201,7 +202,7 @@ async function main() {
     console.log('\n--- Login Method ---');
     console.log('1. QR Code');
     console.log('2. Phone Number');
-    const choice = await askQuestion('Select (1 or 2): ');
+    await askQuestion('Select (1 or 2): ');
   }
 
   startBot();
