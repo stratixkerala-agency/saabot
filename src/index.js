@@ -55,6 +55,10 @@ function getSender(msg) {
 }
 
 async function startBot() {
+  if (process.env.RESET_SESSIONS === 'true') {
+    try { require('fs').rmSync(AUTH_DIR, { recursive: true, force: true }); } catch {}
+    console.log('[Sessions cleared]');
+  }
   if (!existsSync(AUTH_DIR)) mkdirSync(AUTH_DIR, { recursive: true });
 
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
