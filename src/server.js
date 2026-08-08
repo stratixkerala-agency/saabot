@@ -101,6 +101,10 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+app.get('/', (req, res) => {
+  res.sendFile('index.html', { root: 'public' });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Dashboard: http://localhost:${PORT}`);
 });
