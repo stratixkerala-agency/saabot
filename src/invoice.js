@@ -246,52 +246,82 @@ export async function generateQuoteFromConversation(chatId, serviceName, amount,
 
   switch (serviceName.toLowerCase()) {
     case 'website':
+    case 'basic website':
     case 'website package':
       items.push(
-        { description: 'Professional Website Design & Development', quantity: 'X1', price: '14,000', total: '14,000' },
-        { description: '3 Months SEO Support', quantity: 'X1', price: '4,000', total: '4,000' },
-        { description: 'UI/UX Design + Responsive Layout', quantity: 'X1', price: '2,000', total: '2,000' }
+        { description: 'Professional Website Design & Development', quantity: 'X1', price: '20,000', total: '20,000' }
       );
       break;
     case 'website + ai':
     case 'website+ai':
     case 'website with ai':
     case 'ai website':
-    case 'website + ai package':
       items.push(
         { description: 'Professional Website Design & Development', quantity: 'X1', price: '20,000', total: '20,000' },
-        { description: '6 Months SEO Support', quantity: 'X1', price: '8,000', total: '8,000' },
-        { description: 'AI Chatbot Integration', quantity: 'X1', price: '5,000', total: '5,000' },
-        { description: 'WhatsApp Business Integration', quantity: 'X1', price: '2,000', total: '2,000' }
+        { description: 'AI Integration & Automation Setup', quantity: 'X1', price: '15,000', total: '15,000' }
       );
       break;
     case 'ecommerce':
-    case 'ecommerce + ai':
     case 'ecommerce website':
+    case 'ecommerce + ai':
       items.push(
         { description: 'Ecommerce Website Development', quantity: 'X1', price: '30,000', total: '30,000' },
-        { description: 'AI Integration + Custom Features', quantity: 'X1', price: '15,000', total: '15,000' },
-        { description: 'Payment Gateway Setup', quantity: 'X1', price: '5,000', total: '5,000' },
-        { description: '6 Months SEO + Marketing Support', quantity: 'X1', price: '5,000', total: '5,000' }
+        { description: 'Payment Gateway & Product Setup', quantity: 'X1', price: '10,000', total: '10,000' }
+      );
+      break;
+    case 'digital marketing':
+    case 'marketing':
+    case 'meta ads':
+    case 'facebook ads':
+      items.push(
+        { description: 'Digital Marketing Package', quantity: 'X1', price: '20,000', total: '20,000' }
+      );
+      break;
+    case 'branding':
+      items.push(
+        { description: 'Branding Package', quantity: 'X1', price: '15,000', total: '15,000' }
+      );
+      break;
+    case 'video production':
+    case 'video':
+      items.push(
+        { description: 'Video Production Package', quantity: 'X1', price: '15,000', total: '15,000' }
+      );
+      break;
+    case 'graphic designing':
+    case 'graphic design':
+    case 'graphics':
+      items.push(
+        { description: 'Graphic Designing Package', quantity: 'X1', price: '15,000', total: '15,000' }
+      );
+      break;
+    case 'ai':
+    case 'ai services':
+    case 'ai integration':
+      items.push(
+        { description: 'AI Integration & Setup', quantity: 'X1', price: '15,000', total: '15,000' }
       );
       break;
     case 'ai automation':
     case 'automation':
-    case 'messaging automation':
-    case 'whatsapp automation':
       items.push(
-        { description: 'AI Sales Agent Setup', quantity: 'X1', price: '3,000', total: '3,000' },
-        { description: 'WhatsApp Messaging Automation (250 msgs/mo)', quantity: 'X1', price: '2,000', total: '2,000' },
-        { description: 'Monthly Maintenance & Support', quantity: '1 mo', price: '1,000', total: '1,000' }
+        { description: 'AI Automation Setup', quantity: 'X1', price: '15,000', total: '15,000' }
       );
       break;
-    case 'marketing':
-    case 'meta ads':
-    case 'digital marketing':
+    case 'whatsapp automation':
+    case 'whatsapp bot':
+    case 'messaging automation':
       items.push(
-        { description: 'Meta/Facebook Ads Management', quantity: '1 mo', price: '8,000', total: '8,000' },
-        { description: 'Social Media Content & Management', quantity: '1 mo', price: '4,000', total: '4,000' },
-        { description: 'Campaign Analytics & Reporting', quantity: '1 mo', price: '3,000', total: '3,000' }
+        { description: 'WhatsApp Automation (250 msgs/mo)', quantity: 'X1', price: '6,000', total: '6,000' }
+      );
+      break;
+    case 'saas':
+    case 'custom saas':
+    case 'ai workflows':
+    case 'ai hardware':
+    case 'saas + ai':
+      items.push(
+        { description: 'Custom SaaS / AI Workflow / AI Hardware', quantity: 'X1', price: '30,000', total: '30,000' }
       );
       break;
     default:
@@ -313,7 +343,7 @@ export async function generateQuoteFromConversation(chatId, serviceName, amount,
     items,
     subtotal: subtotalNum.toLocaleString('en-IN'),
     vat: '0',
-    others: '400',
-    total: (subtotalNum + 400).toLocaleString('en-IN'),
+    others: '0',
+    total: subtotalNum.toLocaleString('en-IN'),
   });
 }
