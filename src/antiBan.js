@@ -1,6 +1,8 @@
 import config from './config.js';
 
 const messageTimestamps = [];
+let lastApiCall = 0;
+const API_COOLDOWN = 3000; // 3 seconds between API calls
 
 function randomDelay() {
   return config.minDelay + Math.random() * (config.maxDelay - config.minDelay);
@@ -19,6 +21,18 @@ export async function typingDelay() {
   }
 
   await sleep(delay);
+}
+
+// Wait for API cooldown between calls
+export async function apiCooldown() {
+  const now = Date.now();
+  const elapsed = now - lastApiCall;
+  if (elapsed < API_COOLDOWN) {
+    const wait = API_COOLDOWN - elapsed + Math.random() * 1000;
+    console.log(`[API cooldown] waiting ${Math.round(wait)}ms`);
+    await sleep(wait);
+  }
+  lastApiCall = Date.now();
 }
 
 export function canSendMessage() {

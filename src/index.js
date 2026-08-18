@@ -3,7 +3,7 @@ import { Boom } from '@hapi/boom';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { generateReply, detectLanguage, translateReply } from './ai.js';
 import { generateQuoteFromConversation } from './invoice.js';
-import { typingDelay, canSendMessage, recordMessage } from './antiBan.js';
+import { typingDelay, canSendMessage, recordMessage, apiCooldown } from './antiBan.js';
 import { setOnline, setQr, logConversation } from './server.js';
 
 const STATE_FILE = './bot-state.json';
@@ -162,6 +162,7 @@ async function startBot() {
         const lowerText = trimmed.toLowerCase();
         if (/\b(quote|invoice|pdf|bill|price\s*list)\b/.test(lowerText)) {
           await typingDelay();
+          await apiCooldown();
 
           // Detect which service they want
           let service = 'website';
@@ -200,13 +201,15 @@ async function startBot() {
         }
 
         await typingDelay();
+        await apiCooldown();
 
         // Generate reply
         let reply = await generateReply(chatId, trimmed);
 
-        // Translate if non-English
+        // Translate if non-English (with extra delay)
         const detectedLang = detectLanguage(trimmed);
         if (detectedLang && reply) {
+          await apiCooldown();
           reply = await translateReply(reply, detectedLang);
         }
 
