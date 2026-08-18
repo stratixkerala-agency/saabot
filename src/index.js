@@ -158,6 +158,35 @@ async function startBot() {
 
         if (!canSendMessage()) { console.log('[Rate limited]'); return; }
 
+        // Check if user wants a quote/invoice PDF
+        const lowerText = trimmed.toLowerCase();
+        if (/\b(quote|invoice|pdf|bill|price\s*list)\b/.test(lowerText)) {
+          await typingDelay();
+          await sock.sendMessage(chatId, { text: 'sure! generating your quote, give me a sec...' });
+          try {
+            const pdfBuffer = await generateQuoteFromConversation(
+              chatId,
+              'Website Package',
+              null,
+              'Customer'
+            );
+            await sock.sendMessage(chatId, {
+              document: pdfBuffer,
+              fileName: 'Stratix-Quote.pdf',
+              mimetype: 'application/pdf',
+              caption: 'here\'s your quote! take a look and let me know if you want to go ahead'
+            });
+            recordMessage();
+            logConversation(chatId, trimmed, '[PDF quote sent]');
+            console.log(`[Quote PDF sent] to ${chatId}`);
+            continue;
+          } catch (err) {
+            console.error('[Quote error]:', err.message);
+            await sock.sendMessage(chatId, { text: 'hmm something went wrong generating the quote, try again in a bit' });
+            continue;
+          }
+        }
+
         await typingDelay();
 
         // Generate reply
