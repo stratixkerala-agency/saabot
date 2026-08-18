@@ -162,23 +162,35 @@ async function startBot() {
         const lowerText = trimmed.toLowerCase();
         if (/\b(quote|invoice|pdf|bill|price\s*list)\b/.test(lowerText)) {
           await typingDelay();
-          await sock.sendMessage(chatId, { text: 'sure! generating your quote, give me a sec...' });
+
+          // Detect which service they want
+          let service = 'website';
+          if (/ecommerce|ecom|shop|store/i.test(lowerText)) service = 'ecommerce';
+          else if (/ai|chatbot|automation|intelligent/i.test(lowerText)) service = 'website + ai';
+          else if (/market|ads|meta|influencer|shoot/i.test(lowerText)) service = 'marketing';
+          else if (/auto|sales\s*agent|messaging/i.test(lowerText)) service = 'ai automation';
+
+          // Extract client name from message if present
+          const nameMatch = trimmed.match(/(?:for|name|client)[:\s]+(.+)/i);
+          const clientName = nameMatch ? nameMatch[1].trim().slice(0, 40) : 'Customer';
+
+          await sock.sendMessage(chatId, { text: `generating your ${service} quote, one sec...` });
           try {
             const pdfBuffer = await generateQuoteFromConversation(
               chatId,
-              'Website Package',
+              service,
               null,
-              'Customer'
+              clientName
             );
             await sock.sendMessage(chatId, {
               document: pdfBuffer,
-              fileName: 'Stratix-Quote.pdf',
+              fileName: `Stratix-${service.replace(/\s+/g, '-')}-Quote.pdf`,
               mimetype: 'application/pdf',
-              caption: 'here\'s your quote! take a look and let me know if you want to go ahead'
+              caption: `here's your ${service} quote! take a look and let me know if you want to go ahead`
             });
             recordMessage();
-            logConversation(chatId, trimmed, '[PDF quote sent]');
-            console.log(`[Quote PDF sent] to ${chatId}`);
+            logConversation(chatId, trimmed, `[PDF quote sent: ${service}]`);
+            console.log(`[Quote PDF sent] ${service} to ${chatId}`);
             continue;
           } catch (err) {
             console.error('[Quote error]:', err.message);
