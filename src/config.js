@@ -43,6 +43,7 @@ const config = {
 
   // OpenRouter - translation fallback
   openrouterApiKey: process.env.OPENROUTER_API_KEY,
+  translationModel: process.env.TRANSLATION_MODEL || 'nvidia/nemotron-3.5-lightning:free',
 
   // Bot config
   systemPrompt: process.env.SYSTEM_PROMPT || 'You are a helpful WhatsApp assistant.',
