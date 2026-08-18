@@ -56,7 +56,9 @@ async function callGroq(messages) {
     throw new Error('Empty response from Groq');
   }
 
-  return response.choices[0].message.content;
+  const msg = response.choices[0].message;
+  // Some models put response in reasoning field with empty content
+  return msg.content || msg.reasoning || '';
 }
 
 async function callOpenRouter(messages, apiKey, model) {
