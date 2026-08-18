@@ -212,6 +212,38 @@ async function startBot() {
 
         if (!reply) continue;
 
+        // Check if AI wants to generate a quote
+        const quoteMarker = reply.match(/\[GENERATE_QUOTE:([^:]+):([^\]]+)\]/);
+        if (quoteMarker) {
+          const service = quoteMarker[1].trim();
+          const clientName = quoteMarker[2].trim();
+
+          // Strip marker from reply
+          const cleanReply = reply.replace(/\[GENERATE_QUOTE:[^\]]+\]/g, '').trim();
+
+          // Send the text reply first
+          if (cleanReply) {
+            await sock.sendMessage(chatId, { text: cleanReply });
+          }
+
+          // Generate and send PDF
+          console.log(`[Auto-quote] service=${service} client=${clientName}`);
+          try {
+            const pdfBuffer = await generateQuoteFromConversation(chatId, service, null, clientName);
+            await sock.sendMessage(chatId, {
+              document: pdfBuffer,
+              fileName: `Stratix-${service.replace(/\s+/g, '-')}-Quote.pdf`,
+              mimetype: 'application/pdf',
+              caption: `here's your ${service} quote! let me know if you want to go ahead`
+            });
+            recordMessage();
+            logConversation(chatId, trimmed, `[Auto-quote sent: ${service} for ${clientName}]`);
+          } catch (err) {
+            console.error('[Auto-quote error]:', err.message);
+          }
+          continue;
+        }
+
         await sock.sendMessage(chatId, { text: reply });
         recordMessage();
         logConversation(chatId, trimmed, reply);
