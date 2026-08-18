@@ -254,8 +254,10 @@ export async function generateQuoteFromConversation(chatId, serviceName, amount,
       );
       break;
     case 'website + ai':
+    case 'website+ai':
     case 'website with ai':
     case 'ai website':
+    case 'website + ai package':
       items.push(
         { description: 'Professional Website Design & Development', quantity: 'X1', price: '20,000', total: '20,000' },
         { description: '6 Months SEO Support', quantity: 'X1', price: '8,000', total: '8,000' },
