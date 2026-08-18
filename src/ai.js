@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk';
 import config from './config.js';
+import { getProfile, getProfileSummary } from './profiles.js';
 
 const groq = new Groq({ apiKey: config.groqApiKey });
 
@@ -118,12 +119,18 @@ export async function generateReply(chatId, userMessage) {
 
     cleanupOldHistories();
 
+    // Get user profile for context
+    const profileSummary = getProfileSummary(chatId);
+
     const history = getChatHistory(chatId);
     history.push({ role: 'user', content: userMessage });
     trimHistory(history);
 
+    // Include profile summary in system prompt
+    const systemMsg = config.systemPrompt + `\n\nCollected info about this user: ${profileSummary}`;
+
     const messages = [
-      { role: 'system', content: config.systemPrompt },
+      { role: 'system', content: systemMsg },
       ...history,
     ];
 
