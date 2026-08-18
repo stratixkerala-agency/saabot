@@ -49,7 +49,7 @@ async function callGroq(messages) {
     model: config.groqModel,
     messages,
     max_tokens: 256,
-    temperature: 0.7,
+    temperature: 0,
   });
 
   if (!response.choices || !response.choices.length || !response.choices[0].message) {
