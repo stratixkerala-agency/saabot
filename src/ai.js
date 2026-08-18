@@ -17,6 +17,10 @@ const INJECTION_PATTERNS = [
   /bypass\s+(all\s+)?(safety|security|rules?)/i,
   /do\s+anything\s+now/i,
   /DAN\s+mode/i,
+  /you\s+are\s+\w+\s+from\s+now\s+on/i,
+  /your\s+name\s+is\s+\w+/i,
+  /say\s+hello\s+to\s+everything/i,
+  /respond\s+with\s+hello/i,
 ];
 
 function isPromptInjection(text) {
@@ -160,7 +164,14 @@ export async function generateReply(chatId, userMessage) {
 
 export async function translateReply(text, targetLangHint) {
   try {
-    const prompt = `Translate this WhatsApp message to ${targetLangHint || 'English'}. Keep it natural and casual. Only output the translation:\n\n${text}`;
+    let targetLang = targetLangHint || 'English';
+    let prompt;
+
+    if (targetLang === 'Manglish') {
+      prompt = `Translate this message to Manglish (Malayalam written in English letters, like "njan", "ningal", "ente", "sheri", "illa"). Keep it natural and casual for WhatsApp. Only output the translation:\n\n${text}`;
+    } else {
+      prompt = `Translate this WhatsApp message to ${targetLang}. Keep it natural and casual. Only output the translation:\n\n${text}`;
+    }
 
     const messages = [
       { role: 'system', content: 'You are a translator. Output only the translation.' },
@@ -186,6 +197,11 @@ export function detectLanguage(text) {
   if (/[\u3040-\u309F\u30A0-\u30FF]/.test(text)) return 'Japanese';
   if (/[\uAC00-\uD7AF]/.test(text)) return 'Korean';
   if (/[\u0400-\u04FF]/.test(text)) return 'Russian';
+
+  // Detect Manglish (Malayalam in English letters)
+  const manglishWords = /\b(njan|ningal|ente|ninte|avide|ivide|ath|ith|ee|aa|athe|ithe|cheyyum|aakum|aanu|undayirunnu|ponn|poyi|varum|varunnu|vannu|tharaan|tharan|kazhinju|kazhiyilla|sheri|illa|ente|ninte|avar|avarude|njangal|nammal|cheythu|cheyyuka|edukkuka|kanda|kettu|arinjilla|ariyilla|mathi|enda|enthina|entha|engane|evide|eppozha|aar|aare|eth|ethu)\b/i;
+  if (manglishWords.test(text)) return 'Manglish';
+
   return null;
 }
 
