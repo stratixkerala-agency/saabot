@@ -179,7 +179,7 @@ export async function translateReply(text, targetLangHint) {
     ];
 
     // Use OpenRouter for translation (free model)
-    const translated = await callOpenRouter(messages, config.openrouterApiKey, 'meta-llama/llama-3.1-8b-instruct:free');
+    const translated = await callOpenRouter(messages, config.openrouterApiKey, 'nvidia/nemotron-3.5-lightning:free');
     return translated || text;
   } catch (error) {
     console.error('[Translation error]:', error.message);
