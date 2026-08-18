@@ -162,7 +162,6 @@ async function startBot() {
         const lowerText = trimmed.toLowerCase();
         if (/\b(quote|invoice|pdf|bill|price\s*list)\b/.test(lowerText)) {
           await typingDelay();
-          await apiCooldown();
 
           // Detect which service they want
           let service = 'website';
@@ -201,12 +200,11 @@ async function startBot() {
         }
 
         await typingDelay();
-        await apiCooldown();
 
-        // Generate reply
+        // Generate reply (Groq - no cooldown needed)
         let reply = await generateReply(chatId, trimmed);
 
-        // Translate if non-English (with extra delay)
+        // Translate if non-English (OpenRouter - add cooldown)
         const detectedLang = detectLanguage(trimmed);
         if (detectedLang && reply) {
           await apiCooldown();
