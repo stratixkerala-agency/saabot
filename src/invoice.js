@@ -229,12 +229,23 @@ async function renderLatexToPdf(latex) {
     throw new Error(`LaTeX render ${response.status}: ${err}`);
   }
 
-  const data = await response.json();
-  if (!data.pdf) {
-    throw new Error('No PDF in response');
+  // API returns raw PDF bytes, not JSON
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    const data = await response.json();
+    if (!data.pdf) throw new Error('No PDF in response');
+    return Buffer.from(data.pdf, 'base64');
   }
 
-  return Buffer.from(data.pdf, 'base64');
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  // Verify it's a PDF
+  if (buffer[0] !== 0x25 || buffer[1] !== 0x50) {
+    throw new Error('Response is not a valid PDF');
+  }
+
+  return buffer;
 }
 
 export async function generateQuotePdf({
