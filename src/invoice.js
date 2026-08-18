@@ -276,6 +276,7 @@ export async function generateQuoteFromConversation(chatId, serviceName, amount,
     case 'ai automation':
     case 'automation':
     case 'messaging automation':
+    case 'whatsapp automation':
       items.push(
         { description: 'AI Sales Agent Setup', quantity: 'X1', price: '3,000', total: '3,000' },
         { description: 'WhatsApp Messaging Automation (250 msgs/mo)', quantity: 'X1', price: '2,000', total: '2,000' },
@@ -293,7 +294,7 @@ export async function generateQuoteFromConversation(chatId, serviceName, amount,
       break;
     default:
       items.push(
-        { description: 'Custom Project - ' + (projectDescription || 'Digital Services'), quantity: 'X1', price: amount || 'TBD', total: amount || 'TBD' }
+        { description: 'Custom Project - ' + (serviceName || 'Digital Services'), quantity: 'X1', price: amount || 'TBD', total: amount || 'TBD' }
       );
   }
 

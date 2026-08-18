@@ -58,12 +58,12 @@ function extractAndStoreProfile(chatId, text) {
   // Extract name if not already collected
   if (!current.name) {
     const namePatterns = [
-      /(?:i(?:'m| am)|my name is|this is|i'm|im)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
-      /(?:name|called)\s*[:=]?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+      /(?:my name is|i'm|im|i am)\s+([A-Z][a-z]+)/i,
+      /(?:call me|this is)\s+([A-Z][a-z]+)/i,
     ];
     for (const pattern of namePatterns) {
       const match = text.match(pattern);
-      if (match) {
+      if (match && match[1].length > 1) {
         updateProfile(chatId, { name: match[1].trim(), step: 'has_name' });
         console.log(`[Profile] name captured: ${match[1].trim()}`);
         break;
