@@ -1,13 +1,17 @@
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { generateReply } from './ai.js';
+import { generateReply, detectLanguage, translateReply } from './ai.js';
+import { generateQuoteFromConversation } from './invoice.js';
 import { typingDelay, canSendMessage, recordMessage } from './antiBan.js';
 import { setOnline, setQr, logConversation } from './server.js';
 
 const STATE_FILE = './bot-state.json';
 const CONTACTS_FILE = './contacts-seen.json';
 const AUTH_DIR = './sessions';
+
+// Invoice conversation state per chat
+const invoiceStates = new Map();
 
 function loadState() {
   if (existsSync(STATE_FILE)) {
@@ -52,6 +56,114 @@ function getChatId(msg) {
 function getSender(msg) {
   if (msg.key.fromMe) return 'me';
   return msg.key.participant || msg.key.remoteJid;
+}
+
+function isInvoiceRequest(text) {
+  const lower = text.toLowerCase();
+  return /\b(quote|invoice|bill|price\s*list|pricing|generate.*quote|send.*quote|send.*invoice|pdf|receipt|estimate)\b/.test(lower);
+}
+
+function isInvoiceConfirm(text) {
+  const lower = text.toLowerCase();
+  return /\b(yes|yeah|sure|ok|okay|please|generate|send|do\s*it)\b/.test(lower);
+}
+
+async function handleInvoiceFlow(chatId, text, sock) {
+  const state = invoiceStates.get(chatId);
+
+  if (!state) {
+    // Check if user wants a quote
+    if (isInvoiceRequest(text)) {
+      invoiceStates.set(chatId, { step: 'ask_name', timestamp: Date.now() });
+      return "sure! I'll generate a quote for you. what's your name?";
+    }
+    return null;
+  }
+
+  // Clear stale states (older than 5 minutes)
+  if (Date.now() - state.timestamp > 300000) {
+    invoiceStates.delete(chatId);
+    return null;
+  }
+
+  const lower = text.toLowerCase();
+
+  // Cancel invoice flow
+  if (/\b(cancel|never\s*mind|forget\s*it|stop|no\s*thanks)\b/.test(lower)) {
+    invoiceStates.delete(chatId);
+    return "no worries! let me know if you need anything else";
+  }
+
+  switch (state.step) {
+    case 'ask_name':
+      state.clientName = text.trim();
+      state.step = 'ask_service';
+      state.timestamp = Date.now();
+      return `got it ${state.clientName}! what service do you need a quote for?\n\n1. website (₹20K)\n2. website + AI (₹35K)\n3. ecommerce (₹55K+)\n4. AI automation (₹6K/mo)\n5. marketing (₹15K/mo)`;
+
+    case 'ask_service':
+      let service = 'website';
+      let serviceName = 'Website Package';
+
+      if (/1|website|web/i.test(text) && !/ai|ecom|auto/i.test(text)) {
+        service = 'website';
+        serviceName = 'Website Package';
+      } else if (/2|website.*ai|ai.*website/i.test(text)) {
+        service = 'website + ai';
+        serviceName = 'Website + AI Package';
+      } else if (/3|ecommerce|ecommerce/i.test(text)) {
+        service = 'ecommerce';
+        serviceName = 'Ecommerce + AI Package';
+      } else if (/4|automation|auto|ai\s*auto/i.test(text)) {
+        service = 'ai automation';
+        serviceName = 'AI Automation';
+      } else if (/5|marketing|meta|ads|influencer/i.test(text)) {
+        service = 'marketing';
+        serviceName = 'Marketing Services';
+      } else {
+        service = text.trim().toLowerCase();
+        serviceName = text.trim();
+      }
+
+      state.service = service;
+      state.serviceName = serviceName;
+      state.step = 'confirm';
+      state.timestamp = Date.now();
+      return `got it - ${serviceName}. want me to generate the quote now? (say yes or no)`;
+
+    case 'confirm':
+      if (isInvoiceConfirm(text)) {
+        invoiceStates.delete(chatId);
+        await sock.sendMessage(chatId, { text: 'one sec, generating your quote...' });
+
+        try {
+          const pdfBuffer = await generateQuoteFromConversation(
+            chatId,
+            state.service,
+            null,
+            state.clientName
+          );
+
+          await sock.sendMessage(chatId, {
+            document: pdfBuffer,
+            fileName: `Stratix-Quote-${state.clientName.replace(/\s+/g, '-')}.pdf`,
+            mimetype: 'application/pdf',
+            caption: `here's your quote for ${state.serviceName}! take a look and let me know if you want to go ahead 😊`
+          });
+        } catch (err) {
+          console.error('[Invoice error]:', err.message);
+          await sock.sendMessage(chatId, { text: 'hmm something went wrong generating the quote, try again in a bit' });
+        }
+        return null;
+      } else {
+        invoiceStates.delete(chatId);
+        return "no worries! just say 'quote' when you're ready";
+      }
+
+    default:
+      invoiceStates.delete(chatId);
+      return null;
+  }
 }
 
 async function startBot() {
@@ -158,8 +270,31 @@ async function startBot() {
 
         if (!canSendMessage()) { console.log('[Rate limited]'); return; }
 
+        // Check invoice flow first
+        const invoiceReply = await handleInvoiceFlow(chatId, trimmed, sock);
+        if (invoiceReply) {
+          await typingDelay();
+          await sock.sendMessage(chatId, { text: invoiceReply });
+          recordMessage();
+          logConversation(chatId, trimmed, invoiceReply);
+          console.log(`[Invoice flow]: ${invoiceReply.slice(0, 80)}`);
+          continue;
+        }
+
+        // Detect language for multilingual support
+        const detectedLang = detectLanguage(trimmed);
+        const needsTranslation = detectedLang !== null;
+
         await typingDelay();
-        const reply = await generateReply(chatId, trimmed);
+
+        // Generate reply
+        let reply = await generateReply(chatId, trimmed);
+
+        // Translate if non-English
+        if (needsTranslation && reply) {
+          reply = await translateReply(reply, detectedLang);
+        }
+
         await sock.sendMessage(chatId, { text: reply });
         recordMessage();
         logConversation(chatId, trimmed, reply);
