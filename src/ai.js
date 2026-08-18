@@ -57,8 +57,7 @@ async function callGroq(messages) {
   }
 
   const msg = response.choices[0].message;
-  // Some models put response in reasoning field with empty content
-  return msg.content || msg.reasoning || '';
+  return msg.content || '';
 }
 
 async function callOpenRouter(messages, apiKey, model) {
