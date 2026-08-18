@@ -1,17 +1,11 @@
+import Groq from 'groq-sdk';
 import config from './config.js';
+
+const groq = new Groq({ apiKey: config.groqApiKey });
 
 const MAX_CONTEXT_MESSAGES = 10;
 const MAX_HISTORY_SIZE = 100;
 const chatHistories = new Map();
-const aiAskCounts = new Map();
-
-// Free models to try in order
-const FREE_MODELS = [
-  'openai/gpt-oss-20b:free',
-  'meta-llama/llama-3.1-8b-instruct:free',
-  'google/gemma-2-9b-it:free',
-  'mistralai/mistral-7b-instruct:free',
-];
 
 const INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|rules?)/i,
@@ -50,70 +44,49 @@ function cleanupOldHistories() {
   }
 }
 
-async function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+async function callGroq(messages) {
+  const response = await groq.chat.completions.create({
+    model: config.groqModel,
+    messages,
+    max_tokens: 256,
+    temperature: 0.7,
+  });
 
-async function callOpenRouter(messages, apiKey, model, retries = 3) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://stratixagency.site',
-          'X-Title': 'Stratix Agency Bot',
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          max_tokens: 256,
-          temperature: 0.7,
-        }),
-      });
-
-      if (response.status === 429) {
-        const retryAfter = response.headers.get('retry-after') || 5;
-        console.log(`[Rate limited] attempt ${attempt}/${retries}, waiting ${retryAfter}s...`);
-        await sleep(retryAfter * 1000);
-        continue;
-      }
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`OpenRouter ${response.status}: ${error}`);
-      }
-
-      const data = await response.json();
-      if (!data.choices || !data.choices.length || !data.choices[0].message) {
-        throw new Error('Empty response from OpenRouter');
-      }
-
-      return data.choices[0].message.content;
-    } catch (err) {
-      if (attempt === retries) throw err;
-      console.log(`[API error] attempt ${attempt}/${retries}: ${err.message}`);
-      await sleep(2000 * attempt);
-    }
-  }
-}
-
-async function callWithFallback(messages, apiKey) {
-  // Try primary model first
-  const models = [config.openrouterModel, ...FREE_MODELS.filter(m => m !== config.openrouterModel)];
-
-  for (const model of models) {
-    try {
-      const reply = await callOpenRouter(messages, apiKey, model, 2);
-      if (reply) return reply;
-    } catch (err) {
-      console.log(`[Model failed] ${model}: ${err.message}`);
-      continue;
-    }
+  if (!response.choices || !response.choices.length || !response.choices[0].message) {
+    throw new Error('Empty response from Groq');
   }
 
-  throw new Error('All models failed');
+  return response.choices[0].message.content;
+}
+
+async function callOpenRouter(messages, apiKey, model) {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://stratixagency.site',
+      'X-Title': 'Stratix Agency Bot',
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: 256,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenRouter ${response.status}: ${error}`);
+  }
+
+  const data = await response.json();
+  if (!data.choices || !data.choices.length || !data.choices[0].message) {
+    throw new Error('Empty response from OpenRouter');
+  }
+
+  return data.choices[0].message.content;
 }
 
 export async function generateReply(chatId, userMessage) {
@@ -136,7 +109,7 @@ export async function generateReply(chatId, userMessage) {
       ...history,
     ];
 
-    let reply = await callWithFallback(messages, config.openrouterApiKey);
+    let reply = await callGroq(messages);
 
     if (!reply || !reply.trim()) {
       return "hmm something went wrong, try again in a bit";
@@ -147,8 +120,11 @@ export async function generateReply(chatId, userMessage) {
 
     return reply;
   } catch (error) {
-    console.error('All models failed:', error.message);
-    return "hey I'm a bit swamped right now, give me a sec and try again";
+    console.error('Groq API error:', error.message);
+    if (error.status === 429) {
+      return "hey I'm a bit swamped right now, give me a sec and try again";
+    }
+    return "hmm something went wrong, try again in a bit";
   }
 }
 
@@ -161,7 +137,8 @@ export async function translateReply(text, targetLangHint) {
       { role: 'user', content: prompt },
     ];
 
-    const translated = await callWithFallback(messages, config.openrouterApiKey);
+    // Use OpenRouter for translation (free model)
+    const translated = await callOpenRouter(messages, config.openrouterApiKey, 'meta-llama/llama-3.1-8b-instruct:free');
     return translated || text;
   } catch (error) {
     console.error('[Translation error]:', error.message);
@@ -184,5 +161,4 @@ export function detectLanguage(text) {
 
 export function clearHistory(chatId) {
   chatHistories.delete(chatId);
-  aiAskCounts.delete(chatId);
 }

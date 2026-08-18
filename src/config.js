@@ -33,28 +33,26 @@ function loadEnv() {
 loadEnv();
 
 const config = {
-  // OpenRouter - main chat
-  openrouterApiKey: process.env.OPENROUTER_API_KEY,
-  openrouterModel: process.env.OPENROUTER_MODEL || 'openai/gpt-oss-20b:free',
+  // Groq - main chat (fast, reliable)
+  groqApiKey: process.env.GROQ_API_KEY,
+  groqModel: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
 
-  // OpenRouter - invoice generation
+  // OpenRouter - invoice generation (gpt-oss-20b)
   openrouterInvoiceKey: process.env.OPENROUTER_INVOICE_KEY,
   invoiceModel: process.env.INVOICE_MODEL || 'openai/gpt-oss-20b:free',
 
-  // Legacy Groq (kept for fallback)
-  groqApiKey: process.env.GROQ_API_KEY,
-  groqModel: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+  // OpenRouter - translation fallback
+  openrouterApiKey: process.env.OPENROUTER_API_KEY,
 
   // Bot config
   systemPrompt: process.env.SYSTEM_PROMPT || 'You are a helpful WhatsApp assistant.',
   minDelay: parseInt(process.env.MIN_DELAY_MS || '5000', 10),
   maxDelay: parseInt(process.env.MAX_DELAY_MS || '12000', 10),
   maxMessagesPerMinute: parseInt(process.env.MAX_MESSAGES_PER_MINUTE || '8', 10),
-  aiAskLimit: parseInt(process.env.AI_ASK_LIMIT || '3', 10),
 };
 
-if (!config.openrouterApiKey) {
-  console.error('OPENROUTER_API_KEY is required. Set it in .env or Railway Variables.');
+if (!config.groqApiKey) {
+  console.error('GROQ_API_KEY is required. Set it in .env or Railway Variables.');
   process.exit(1);
 }
 
