@@ -212,14 +212,26 @@ async function startBot() {
 
         if (!reply) continue;
 
-        // Check if AI wants to generate a quote
-        const quoteMarker = reply.match(/\[GENERATE_QUOTE:([^:]+):([^\]]+)\]/);
-        if (quoteMarker) {
-          const service = quoteMarker[1].trim();
-          const clientName = quoteMarker[2].trim();
+        // Check if AI wants to generate a quote - flexible marker matching
+        const quoteMarker = reply.match(/\[GENERATE_QUOTE[:\s]+([^:\]]+)[:\s]+([^\]]+)\]/i)
+          || reply.match(/\[GENERATE_QUOTE[:\s]+([^\]]+)\]/i);
 
-          // Strip marker from reply
-          const cleanReply = reply.replace(/\[GENERATE_QUOTE:[^\]]+\]/g, '').trim();
+        if (quoteMarker) {
+          let service = 'website';
+          let clientName = 'Customer';
+
+          if (quoteMarker[2]) {
+            service = quoteMarker[1].trim().toLowerCase();
+            clientName = quoteMarker[2].trim();
+          } else {
+            // Single capture - try to parse "service:name" or just service
+            const parts = quoteMarker[1].split(':');
+            service = parts[0].trim().toLowerCase();
+            clientName = parts[1] ? parts[1].trim() : 'Customer';
+          }
+
+          // Strip ALL marker variations from reply
+          const cleanReply = reply.replace(/\[GENERATE_QUOTE[^\]]*\]/gi, '').trim();
 
           // Send the text reply first
           if (cleanReply) {
