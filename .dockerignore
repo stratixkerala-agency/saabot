@@ -1,5 +1,7 @@
-node_modules/
-sessions/
-bot-state.json
+node_modules
 .env
+.git
+.gitignore
+README.md
 *.log
+.DS_Store

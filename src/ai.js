@@ -51,7 +51,7 @@ async function callGroq(messages, retries = 3) {
       const response = await groq.chat.completions.create({
         model: config.groqModel,
         messages,
-        max_tokens: 256,
+        max_tokens: 512,
         temperature: 0,
       });
 
@@ -60,7 +60,12 @@ async function callGroq(messages, retries = 3) {
       }
 
       const msg = response.choices[0].message;
-      const content = msg.content || '';
+      let content = msg.content || '';
+
+      // Reasoning models sometimes put output in reasoning field instead of content
+      if (!content.trim() && msg.reasoning) {
+        content = msg.reasoning;
+      }
 
       // If content is empty, retry (reasoning model sometimes skips content)
       if (!content.trim() && attempt < retries) {
