@@ -243,8 +243,44 @@ export async function generateQuotePdf({
 
 export async function generateQuoteFromConversation(chatId, serviceName, amount, clientName) {
   const items = [];
+  const serviceLower = serviceName.toLowerCase().replace(/\s+/g, ' ').trim();
 
-  switch (serviceName.toLowerCase()) {
+  // Handle composite services like "website+marketing" or "website + marketing"
+  const compositeParts = serviceLower.split(/\s*(?:\+|&|and)\s*/);
+  
+  // If multiple services, look up each one separately
+  if (compositeParts.length > 1) {
+    for (const part of compositeParts) {
+      const partItems = getItemsForService(part.trim());
+      items.push(...partItems);
+    }
+  } else {
+    items.push(...getItemsForService(serviceLower));
+  }
+
+  const subtotalNum = items.reduce((sum, item) => {
+    const p = parseInt(item.price.replace(/,/g, ''), 10);
+    return sum + (isNaN(p) ? 0 : p);
+  }, 0);
+
+  return generateQuotePdf({
+    clientName: clientName || 'Client',
+    clientAddress: 'Address to be confirmed',
+    clientContact: 'Contact to be confirmed',
+    projectDescription: `${serviceName} - Stratix Agency Digital Services`,
+    items,
+    subtotal: subtotalNum.toLocaleString('en-IN'),
+    vat: '0',
+    others: '0',
+    total: subtotalNum.toLocaleString('en-IN'),
+  });
+}
+
+function getItemsForService(serviceName) {
+  const items = [];
+  const s = serviceName.toLowerCase().replace(/\s+/g, ' ').trim();
+
+  switch (s) {
     case 'website':
     case 'basic website':
     case 'website package':
@@ -324,26 +360,16 @@ export async function generateQuoteFromConversation(chatId, serviceName, amount,
         { description: 'Custom SaaS / AI Workflow / AI Hardware', quantity: 'X1', price: '30,000', total: '30,000' }
       );
       break;
+    case 'seo':
+    case 'search engine optimization':
+      items.push(
+        { description: 'SEO Optimization Package', quantity: 'X1', price: '15,000', total: '15,000' }
+      );
+      break;
     default:
       items.push(
-        { description: 'Custom Project - ' + (serviceName || 'Digital Services'), quantity: 'X1', price: amount || 'TBD', total: amount || 'TBD' }
+        { description: 'Custom Project - ' + (serviceName || 'Digital Services'), quantity: 'X1', price: 'TBD', total: 'TBD' }
       );
   }
-
-  const subtotalNum = items.reduce((sum, item) => {
-    const p = parseInt(item.price.replace(/,/g, ''), 10);
-    return sum + (isNaN(p) ? 0 : p);
-  }, 0);
-
-  return generateQuotePdf({
-    clientName: clientName || 'Client',
-    clientAddress: 'Address to be confirmed',
-    clientContact: 'Contact to be confirmed',
-    projectDescription: `${serviceName} - Stratix Agency Digital Services`,
-    items,
-    subtotal: subtotalNum.toLocaleString('en-IN'),
-    vat: '0',
-    others: '0',
-    total: subtotalNum.toLocaleString('en-IN'),
-  });
+  return items;
 }
