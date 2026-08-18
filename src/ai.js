@@ -44,20 +44,37 @@ function cleanupOldHistories() {
   }
 }
 
-async function callGroq(messages) {
-  const response = await groq.chat.completions.create({
-    model: config.groqModel,
-    messages,
-    max_tokens: 256,
-    temperature: 0,
-  });
+async function callGroq(messages, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await groq.chat.completions.create({
+        model: config.groqModel,
+        messages,
+        max_tokens: 256,
+        temperature: 0,
+      });
 
-  if (!response.choices || !response.choices.length || !response.choices[0].message) {
-    throw new Error('Empty response from Groq');
+      if (!response.choices || !response.choices.length || !response.choices[0].message) {
+        throw new Error('Empty response from Groq');
+      }
+
+      const msg = response.choices[0].message;
+      const content = msg.content || '';
+
+      // If content is empty, retry (reasoning model sometimes skips content)
+      if (!content.trim() && attempt < retries) {
+        console.log(`[Groq] Empty content on attempt ${attempt}, retrying...`);
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+
+      return content;
+    } catch (err) {
+      if (attempt === retries) throw err;
+      console.log(`[Groq] Error on attempt ${attempt}: ${err.message}`);
+      await new Promise(r => setTimeout(r, 1000));
+    }
   }
-
-  const msg = response.choices[0].message;
-  return msg.content || '';
 }
 
 async function callOpenRouter(messages, apiKey, model) {
