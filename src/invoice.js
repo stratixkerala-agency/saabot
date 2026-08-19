@@ -297,6 +297,15 @@ function getItemsForService(serviceName) {
         { description: 'AI Integration & Automation Setup', quantity: 'X1', price: '15,000', total: '15,000' }
       );
       break;
+    case 'website + marketing':
+    case 'website+marketing':
+    case 'website and marketing':
+    case 'website & marketing':
+      items.push(
+        { description: 'Professional Website Design & Development', quantity: 'X1', price: '20,000', total: '20,000' },
+        { description: 'Digital Marketing Package', quantity: 'X1', price: '20,000', total: '20,000' }
+      );
+      break;
     case 'ecommerce':
     case 'ecommerce website':
     case 'ecommerce + ai':
