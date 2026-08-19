@@ -306,6 +306,24 @@ function getItemsForService(serviceName) {
         { description: 'Digital Marketing Package', quantity: 'X1', price: '20,000', total: '20,000' }
       );
       break;
+    case 'video production + marketing':
+    case 'video + marketing':
+    case 'video production + digital marketing':
+      items.push(
+        { description: 'Video Production Package', quantity: 'X1', price: '15,000', total: '15,000' },
+        { description: 'Digital Marketing Package', quantity: 'X1', price: '20,000', total: '20,000' }
+      );
+      break;
+    case 'video production + marketing + website':
+    case 'video + marketing + website':
+    case 'website + video production + marketing':
+    case 'website + video + marketing':
+      items.push(
+        { description: 'Professional Website Design & Development', quantity: 'X1', price: '20,000', total: '20,000' },
+        { description: 'Video Production Package', quantity: 'X1', price: '15,000', total: '15,000' },
+        { description: 'Digital Marketing Package', quantity: 'X1', price: '20,000', total: '20,000' }
+      );
+      break;
     case 'ecommerce':
     case 'ecommerce website':
     case 'ecommerce + ai':

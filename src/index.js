@@ -230,20 +230,40 @@ async function startBot() {
         // Check if user has a pending quote they're responding to
         if (pendingQuotes.has(chatId)) {
           const pending = pendingQuotes.get(chatId);
-          if (/\b(yes|yeah|yep|sure|ok|send|please|haan|aa|sheriy|kuranj)\b/i.test(lowerText)) {
+          if (/\b(yes|yeah|yep|sure|send|please|haan|aa|sheriy|kuranj)\b/i.test(lowerText)) {
             pendingQuotes.delete(chatId);
+            
+            // Re-detect ALL services from full conversation before generating
+            const history = getChatHistory(chatId);
+            const fullConv = history.map(m => m.content).join(' ').toLowerCase() + ' ' + lowerText;
+            
+            const services = [];
+            if (/website|site|web\s*dev/i.test(fullConv)) services.push('website');
+            if (/ecommerce|ecom|shop|store/i.test(fullConv)) services.push('ecommerce');
+            if (/video|ads|reel|shoot|production/i.test(fullConv)) services.push('video production');
+            if (/market|social|meta|promot/i.test(fullConv)) services.push('marketing');
+            if (/ai|chatbot|intelligent/i.test(fullConv)) services.push('ai');
+            if (/automation|auto|sales\s*agent|messaging/i.test(fullConv)) services.push('ai automation');
+            if (/whatsapp|msg|message/i.test(fullConv)) services.push('whatsapp automation');
+            if (/saas|workflow|hospital|management|custom|system/i.test(fullConv)) services.push('saas');
+            if (/brand|logo|identity/i.test(fullConv)) services.push('branding');
+            if (/graphic|design|poster|flyer/i.test(fullConv)) services.push('graphic designing');
+            if (/seo|search/i.test(fullConv)) services.push('seo');
+            
+            const finalService = services.length > 1 ? services[0] + ' + ' + services.slice(1).join(' + ') : services[0] || pending.service;
+
             await typingDelay();
-            await sock.sendMessage(chatId, { text: `generating your ${pending.service} quote, one sec...` });
+            await sock.sendMessage(chatId, { text: `generating your ${finalService} quote, one sec...` });
             try {
-              const pdfBuffer = await generateQuoteFromConversation(chatId, pending.service, null, pending.name);
+              const pdfBuffer = await generateQuoteFromConversation(chatId, finalService, null, pending.name);
               await sock.sendMessage(chatId, {
                 document: pdfBuffer,
-                fileName: `Stratix-${pending.service.replace(/\s+/g, '-')}-Quote.pdf`,
+                fileName: `Stratix-${finalService.replace(/\s+/g, '-')}-Quote.pdf`,
                 mimetype: 'application/pdf',
-                caption: `here's your ${pending.service} quote! take a look and let me know if you want to go ahead`
+                caption: `here's your ${finalService} quote! take a look and let me know if you want to go ahead`
               });
               recordMessage();
-              logConversation(chatId, trimmed, `[Quote sent: ${pending.service}]`);
+              logConversation(chatId, trimmed, `[Quote sent: ${finalService}]`);
               continue;
             } catch (err) {
               console.error('[Quote error]:', err.message);
@@ -265,14 +285,25 @@ async function startBot() {
           const profile = getProfile(chatId);
           const clientName = profile?.name || 'Customer';
 
-          // Detect service from conversation context
-          let service = 'website';
-          if (/ecommerce|ecom|shop|store/i.test(lowerText)) service = 'ecommerce';
-          else if (/ai|chatbot|intelligent|automation/i.test(lowerText)) service = 'website + ai';
-          else if (/market|ads|meta|social|influencer/i.test(lowerText)) service = 'marketing';
-          else if (/saas|workflow|hospital|management|custom|system/i.test(lowerText)) service = 'saas';
-          else if (/auto|sales\s*agent|messaging/i.test(lowerText)) service = 'ai automation';
-          else if (/whatsapp|msg|message/i.test(lowerText)) service = 'whatsapp automation';
+          // Detect ALL services from full conversation context
+          const history = getChatHistory(chatId);
+          const fullConv = history.map(m => m.content).join(' ').toLowerCase() + ' ' + lowerText;
+
+          const services = [];
+          if (/website|site|web\s*dev/i.test(fullConv)) services.push('website');
+          if (/ecommerce|ecom|shop|store/i.test(fullConv)) services.push('ecommerce');
+          if (/video|ads|reel|shoot|production/i.test(fullConv)) services.push('video production');
+          if (/market|social|meta|ads|promot/i.test(fullConv)) services.push('marketing');
+          if (/ai|chatbot|intelligent/i.test(fullConv)) services.push('ai');
+          if (/automation|auto|sales\s*agent|messaging/i.test(fullConv)) services.push('ai automation');
+          if (/whatsapp|msg|message/i.test(fullConv)) services.push('whatsapp automation');
+          if (/saas|workflow|hospital|management|custom|system/i.test(fullConv)) services.push('saas');
+          if (/brand|logo|identity/i.test(fullConv)) services.push('branding');
+          if (/graphic|design|poster|flyer/i.test(fullConv)) services.push('graphic designing');
+          if (/seo|search/i.test(fullConv)) services.push('seo');
+
+          // Use first service or combine
+          const service = services.length > 1 ? services[0] + ' + ' + services.slice(1).join(' + ') : services[0] || 'website';
 
           await sock.sendMessage(chatId, { text: `generating your ${service} quote, one sec...` });
           try {
