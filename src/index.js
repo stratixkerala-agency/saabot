@@ -10,6 +10,7 @@ import { updateProfile, getProfile } from './profiles.js';
 const STATE_FILE = './bot-state.json';
 const CONTACTS_FILE = './contacts-seen.json';
 const AUTH_DIR = './sessions';
+const pendingQuotes = new Map(); // chatId -> { service, name }
 
 function loadState() {
   if (existsSync(STATE_FILE)) {
@@ -224,8 +225,40 @@ async function startBot() {
         // Extract and store user details from message
         extractAndStoreProfile(chatId, trimmed);
 
-        // Check if user wants a quote/invoice PDF
         const lowerText = trimmed.toLowerCase();
+
+        // Check if user has a pending quote they're responding to
+        if (pendingQuotes.has(chatId)) {
+          const pending = pendingQuotes.get(chatId);
+          if (/\b(yes|yeah|yep|sure|ok|send|please|haan|aa|sheriy|kuranj)\b/i.test(lowerText)) {
+            pendingQuotes.delete(chatId);
+            await typingDelay();
+            await sock.sendMessage(chatId, { text: `generating your ${pending.service} quote, one sec...` });
+            try {
+              const pdfBuffer = await generateQuoteFromConversation(chatId, pending.service, null, pending.name);
+              await sock.sendMessage(chatId, {
+                document: pdfBuffer,
+                fileName: `Stratix-${pending.service.replace(/\s+/g, '-')}-Quote.pdf`,
+                mimetype: 'application/pdf',
+                caption: `here's your ${pending.service} quote! take a look and let me know if you want to go ahead`
+              });
+              recordMessage();
+              logConversation(chatId, trimmed, `[Quote sent: ${pending.service}]`);
+              continue;
+            } catch (err) {
+              console.error('[Quote error]:', err.message);
+              await sock.sendMessage(chatId, { text: 'hmm something went wrong generating the quote, try again in a bit' });
+              continue;
+            }
+          } else if (/\b(no|nah|nope|illa|illa)\b/i.test(lowerText)) {
+            pendingQuotes.delete(chatId);
+            await typingDelay();
+            await sock.sendMessage(chatId, { text: 'no worries! let me know if you need anything else' });
+            continue;
+          }
+        }
+
+        // Check if user explicitly asks for quote/invoice PDF
         if (/\b(quote|invoice|pdf|bill|price\s*list)\b/.test(lowerText)) {
           await typingDelay();
 
@@ -236,18 +269,12 @@ async function startBot() {
           else if (/market|ads|meta|influencer|shoot/i.test(lowerText)) service = 'marketing';
           else if (/auto|sales\s*agent|messaging/i.test(lowerText)) service = 'ai automation';
 
-          // Extract client name from message if present
           const nameMatch = trimmed.match(/(?:for|name|client)[:\s]+(.+)/i);
           const clientName = nameMatch ? nameMatch[1].trim().slice(0, 40) : 'Customer';
 
           await sock.sendMessage(chatId, { text: `generating your ${service} quote, one sec...` });
           try {
-            const pdfBuffer = await generateQuoteFromConversation(
-              chatId,
-              service,
-              null,
-              clientName
-            );
+            const pdfBuffer = await generateQuoteFromConversation(chatId, service, null, clientName);
             await sock.sendMessage(chatId, {
               document: pdfBuffer,
               fileName: `Stratix-${service.replace(/\s+/g, '-')}-Quote.pdf`,
@@ -269,6 +296,24 @@ async function startBot() {
 
         // Generate reply (Groq - no cooldown needed)
         let reply = await generateReply(chatId, trimmed);
+
+        // Check if AI response indicates interest - ask if they want a quote
+        if (reply && /\b(quote|send.*quote|interested|price|pricing|cost|rate|package)\b/i.test(reply)) {
+          // Detect service from conversation
+          let service = 'website';
+          if (/ecommerce|ecom|shop|store/i.test(lowerText + ' ' + reply)) service = 'ecommerce';
+          else if (/ai|chatbot|intelligent/i.test(lowerText + ' ' + reply)) service = 'website + ai';
+          else if (/market|ads|meta/i.test(lowerText + ' ' + reply)) service = 'marketing';
+          else if (/auto|sales\s*agent|messaging/i.test(lowerText + ' ' + reply)) service = 'ai automation';
+
+          const profile = getProfile(chatId);
+          const clientName = profile?.name || 'Customer';
+
+          // Ask if they want a quote
+          pendingQuotes.set(chatId, { service, name: clientName });
+          reply = reply.replace(/\[GENERATE_QUOTE[^\]]*\]/gi, '').trim();
+          reply += '\n\nwant me to send you a quote?';
+        }
 
         // Translate if non-English (OpenRouter - add cooldown)
         const detectedLang = detectLanguage(trimmed);
