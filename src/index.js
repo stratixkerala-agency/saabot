@@ -335,32 +335,6 @@ async function startBot() {
           reply = reply.replace(/\[GENERATE_QUOTE[^\]]*\]/gi, '').trim();
         }
 
-        // Check if AI response indicates interest - ask if they want a quote
-        if (reply && !pendingQuotes.has(chatId) && /\b(quote|send.*quote|interested|price|pricing|cost|rate|package)\b/i.test(reply)) {
-          // Detect service from conversation
-          let service = 'website';
-          if (/ecommerce|ecom|shop|store/i.test(lowerText + ' ' + reply)) service = 'ecommerce';
-          else if (/ai|chatbot|intelligent/i.test(lowerText + ' ' + reply)) service = 'website + ai';
-          else if (/market|ads|meta|social/i.test(lowerText + ' ' + reply)) service = 'marketing';
-          else if (/auto|sales\s*agent|messaging/i.test(lowerText + ' ' + reply)) service = 'ai automation';
-
-          const profile = getProfile(chatId);
-          const clientName = profile?.name || 'Customer';
-
-          // Check if they mentioned multiple services
-          const fullConv = lowerText + ' ' + reply;
-          const wantsWebsite = /website/i.test(fullConv);
-          const wantsMarketing = /market|social|ads/i.test(fullConv);
-
-          if (wantsWebsite && wantsMarketing) {
-            service = 'website + marketing';
-          }
-
-          // Ask if they want a quote
-          pendingQuotes.set(chatId, { service, name: clientName });
-          reply += '\n\nwant me to send you a quote?';
-        }
-
         // Translate if non-English (OpenRouter - add cooldown)
         const detectedLang = detectLanguage(trimmed);
         if (detectedLang && reply) {
