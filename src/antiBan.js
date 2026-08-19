@@ -2,7 +2,7 @@ import config from './config.js';
 
 const messageTimestamps = [];
 let lastApiCall = 0;
-const API_COOLDOWN = 3000; // 3 seconds between API calls
+const API_COOLDOWN = 1500; // 1.5 seconds between API calls
 
 function randomDelay() {
   return config.minDelay + Math.random() * (config.maxDelay - config.minDelay);
@@ -15,9 +15,9 @@ export function sleep(ms) {
 export async function typingDelay() {
   let delay = randomDelay();
 
-  // 15% chance of a longer pause (simulates human thinking)
-  if (Math.random() < 0.15) {
-    delay += 5000 + Math.random() * 10000;
+  // 10% chance of a longer pause (simulates human thinking)
+  if (Math.random() < 0.10) {
+    delay += 2000 + Math.random() * 3000;
   }
 
   await sleep(delay);
@@ -28,7 +28,7 @@ export async function apiCooldown() {
   const now = Date.now();
   const elapsed = now - lastApiCall;
   if (elapsed < API_COOLDOWN) {
-    const wait = API_COOLDOWN - elapsed + Math.random() * 1000;
+    const wait = API_COOLDOWN - elapsed + Math.random() * 500;
     console.log(`[API cooldown] waiting ${Math.round(wait)}ms`);
     await sleep(wait);
   }
