@@ -250,7 +250,7 @@ async function startBot() {
               await sock.sendMessage(chatId, { text: 'hmm something went wrong generating the quote, try again in a bit' });
               continue;
             }
-          } else if (/\b(no|nah|nope|illa|illa)\b/i.test(lowerText)) {
+          } else if (/\b(no|nah|nope|illa)\b/i.test(lowerText)) {
             pendingQuotes.delete(chatId);
             await typingDelay();
             await sock.sendMessage(chatId, { text: 'no worries! let me know if you need anything else' });
@@ -258,19 +258,21 @@ async function startBot() {
           }
         }
 
-        // Check if user explicitly asks for quote/invoice PDF
-        if (/\b(quote|invoice|pdf|bill|price\s*list)\b/.test(lowerText)) {
+        // Only trigger quote on EXPLICIT requests like "send quote", "generate quote", "get me a quote"
+        if (/\b(send|generate|get|make|create)\s+(me\s+)?(a\s+)?(quote|invoice|pdf|bill)\b/i.test(lowerText)) {
           await typingDelay();
 
-          // Detect which service they want
+          const profile = getProfile(chatId);
+          const clientName = profile?.name || 'Customer';
+
+          // Detect service from conversation context
           let service = 'website';
           if (/ecommerce|ecom|shop|store/i.test(lowerText)) service = 'ecommerce';
-          else if (/ai|chatbot|automation|intelligent/i.test(lowerText)) service = 'website + ai';
-          else if (/market|ads|meta|influencer|shoot/i.test(lowerText)) service = 'marketing';
+          else if (/ai|chatbot|intelligent|automation/i.test(lowerText)) service = 'website + ai';
+          else if (/market|ads|meta|social|influencer/i.test(lowerText)) service = 'marketing';
+          else if (/saas|workflow|hospital|management|custom|system/i.test(lowerText)) service = 'saas';
           else if (/auto|sales\s*agent|messaging/i.test(lowerText)) service = 'ai automation';
-
-          const nameMatch = trimmed.match(/(?:for|name|client)[:\s]+(.+)/i);
-          const clientName = nameMatch ? nameMatch[1].trim().slice(0, 40) : 'Customer';
+          else if (/whatsapp|msg|message/i.test(lowerText)) service = 'whatsapp automation';
 
           await sock.sendMessage(chatId, { text: `generating your ${service} quote, one sec...` });
           try {
