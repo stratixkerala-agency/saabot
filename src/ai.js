@@ -168,18 +168,34 @@ export async function translateReply(text, targetLangHint) {
     let prompt;
 
     if (targetLang === 'Manglish') {
-      prompt = `Translate this message to Manglish (Malayalam written in English letters, like "njan", "ningal", "ente", "sheri", "illa"). Keep it natural and casual for WhatsApp. Only output the translation:\n\n${text}`;
+      prompt = `Translate to Manglish (Malayalam in English letters). Output ONLY the translation, nothing else. No explanations, no options, no breakdown.\n\n${text}`;
     } else {
       prompt = `Translate this WhatsApp message to ${targetLang}. Keep it natural and casual. Only output the translation:\n\n${text}`;
     }
 
     const messages = [
-      { role: 'system', content: 'You are a translator. Output only the translation.' },
+      { role: 'system', content: 'Output ONLY the translation. No explanations, no extra text.' },
       { role: 'user', content: prompt },
     ];
 
     // Use OpenRouter for translation (free model)
-    const translated = await callOpenRouter(messages, config.openrouterApiKey, config.translationModel);
+    let translated = await callOpenRouter(messages, config.openrouterApiKey, config.translationModel);
+    
+    // Clean up translation - remove thinking artifacts, markdown, extra text
+    if (translated) {
+      // Remove markdown formatting
+      translated = translated.replace(/\*\*/g, '').replace(/\*/g, '');
+      // Remove "Here's" or similar prefixes
+      translated = translated.replace(/^(here'?s?\s+(the\s+)?(manglish\s+)?(translation|version)[\s:]*)/i, '');
+      // Remove lines that look like explanations (contain colons with explanations)
+      const lines = translated.split('\n').filter(line => !line.includes('**') && !line.includes('Breakdown') && !line.includes('Option'));
+      translated = lines.join('\n').trim();
+      // Take only first line if multiple lines
+      if (translated.includes('\n')) {
+        translated = translated.split('\n')[0].trim();
+      }
+    }
+    
     return translated || text;
   } catch (error) {
     console.error('[Translation error]:', error.message);
