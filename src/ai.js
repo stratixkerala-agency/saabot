@@ -71,7 +71,42 @@ async function callGroq(messages, retries = 3) {
         content = msg.reasoning;
       }
 
-      // If content is empty, retry (reasoning model sometimes skips content)
+      // Detect if content is mostly reasoning/chain-of-thought (not actual response)
+      // Signs: very long, repetitive, contains "we should", "according to", "the instruction"
+      if (content && content.length > 200) {
+        const reasoningPatterns = /we should|according to (the )?instructions?|the instruction says|we can say|we cannot|but we can|so we (should|need)/i;
+        const matchCount = (content.match(reasoningPatterns) || []).length;
+        
+        if (matchCount >= 2) {
+          console.log(`[Groq] Detected reasoning leak on attempt ${attempt}, extracting response...`);
+          
+          // Try to extract actual response after reasoning
+          // Look for quoted text or text after last period that looks like a response
+          const lines = content.split('\n').filter(l => l.trim());
+          const lastLines = lines.slice(-3).join(' ').trim();
+          
+          // If last lines look like actual response, use them
+          if (lastLines.length < 200 && !reasoningPatterns.test(lastLines)) {
+            content = lastLines;
+          } else {
+            // Try to find text after "Here is" or similar
+            const responseMatch = content.match(/(?:Here (?:is|'s)|Response:|Reply:|Answer:)\s*["']?(.+?)["']?\s*$/i);
+            if (responseMatch) {
+              content = responseMatch[1];
+            } else if (attempt < retries) {
+              // Retry with stronger system message
+              messages = [
+                { role: 'system', content: messages[0].content + '\n\nIMPORTANT: Do NOT show reasoning. Output ONLY the final response to the user. No thinking, no analysis, no "we should" statements.' },
+                ...messages.slice(1)
+              ];
+              await new Promise(r => setTimeout(r, 500));
+              continue;
+            }
+          }
+        }
+      }
+
+      // If content is empty, retry
       if (!content.trim() && attempt < retries) {
         console.log(`[Groq] Empty content on attempt ${attempt}, retrying...`);
         await new Promise(r => setTimeout(r, 1000));
