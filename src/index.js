@@ -335,6 +335,54 @@ async function startBot() {
           reply = reply.replace(/\[GENERATE_QUOTE[^\]]*\]/gi, '').trim();
         }
 
+        // Check if AI wants to generate a quote via marker
+        const quoteMarker = reply.match(/\[GENERATE_QUOTE[:\s]+([^:\]]+)[:\s]+([^\]]+)\]/i)
+          || reply.match(/\[GENERATE_QUOTE[:\s]+([^\]]+)\]/i);
+
+        if (quoteMarker) {
+          let service = 'website';
+          let clientName = 'Customer';
+
+          if (quoteMarker[2]) {
+            service = quoteMarker[1].trim().toLowerCase();
+            clientName = quoteMarker[2].trim();
+          } else {
+            const parts = quoteMarker[1].split(':');
+            service = parts[0].trim().toLowerCase();
+            clientName = parts[1] ? parts[1].trim() : 'Customer';
+          }
+
+          // Also check pending quote for service context
+          if (pendingQuotes.has(chatId)) {
+            const pending = pendingQuotes.get(chatId);
+            if (pending.service) service = pending.service;
+            if (pending.name && clientName === 'Customer') clientName = pending.name;
+            pendingQuotes.delete(chatId);
+          }
+
+          const cleanReply = reply.replace(/\[GENERATE_QUOTE[^\]]*\]/gi, '').trim();
+
+          if (cleanReply) {
+            await sock.sendMessage(chatId, { text: cleanReply });
+          }
+
+          console.log(`[Auto-quote] service=${service} client=${clientName}`);
+          try {
+            const pdfBuffer = await generateQuoteFromConversation(chatId, service, null, clientName);
+            await sock.sendMessage(chatId, {
+              document: pdfBuffer,
+              fileName: `Stratix-${service.replace(/\s+/g, '-')}-Quote.pdf`,
+              mimetype: 'application/pdf',
+              caption: `here's your ${service} quote! let me know if you want to go ahead`
+            });
+            recordMessage();
+            logConversation(chatId, trimmed, `[Auto-quote sent: ${service} for ${clientName}]`);
+          } catch (err) {
+            console.error('[Auto-quote error]:', err.message);
+          }
+          continue;
+        }
+
         // Translate if non-English (OpenRouter - add cooldown)
         const detectedLang = detectLanguage(trimmed);
         if (detectedLang && reply) {
